@@ -9,6 +9,7 @@
 
 static void ht_entry_init(ht_entry_t * entry) {
     entry->key = 0;
+    entry->next = (ht_entry_t *)0;
     l3l4_quin_init(&entry->value);
     ps_stats_init(&entry->stats);
 }
