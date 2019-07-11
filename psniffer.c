@@ -62,13 +62,15 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
     eth = ps_parse_eth(&eth_stats, packet);
     printf("ETH TYPE = 0x%04x \n", ntohs(eth));
     
+    uint8_t quin_present;
+
     switch (ntohs(eth)) {
         case PS_ETH_TYPE_IPV4:
-            ps_parse_ipv4(packet, &quin);
+            quin_present = ps_parse_ipv4(packet, &quin);
             break;
 
         case PS_ETH_TYPE_IPV6:
-            ps_parse_ipv6(packet, &quin);
+            quin_present = ps_parse_ipv6(packet, &quin);
             break;
 
         default:
@@ -77,9 +79,8 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
 
     //----------------------------------hashing stuff --------------------------------------------------------
 
-   ht_add(&ht, &quin, pkthdr->len);
-
-
+    if(quin_present)
+        ht_add(&ht, &quin, pkthdr->len);
 
 
 

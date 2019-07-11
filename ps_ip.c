@@ -5,11 +5,11 @@
 
 void ps_parse_tcp(const uint8_t *, const uint8_t, l3l4_quin_t *);					// declaration
 
-void ps_parse_ipv4(const uint8_t * packet, l3l4_quin_t * quin)
+uint8_t ps_parse_ipv4(const uint8_t * packet, l3l4_quin_t * quin)
 {
 	const ipv4_header_t *ip;
 	int ipv4_header_size;
-
+	uint8_t quin_present = 0;
 	ip = (ipv4_header_t*)(packet + ETHERNET_OFFSET);
 
 	printf("       From: %s\n", inet_ntoa(ip->ip_src));
@@ -23,6 +23,7 @@ void ps_parse_ipv4(const uint8_t * packet, l3l4_quin_t * quin)
 		case 0x06:
 			printf("   Protocol: TCP\n");
 			ps_parse_tcp (packet, ipv4_header_size, quin);							// If TCP, also parse it
+			quin_present = 1;
 			break;
 		case 0x11:
 			printf("   Protocol: UDP\n");
@@ -41,16 +42,16 @@ void ps_parse_ipv4(const uint8_t * packet, l3l4_quin_t * quin)
 	quin->dst_ip.un.v4.ip = ip->ip_dst.s_addr;
 	quin->proto = ip->ip_p;
 
-	return;
+	return quin_present;
 }
 
 
 
-void ps_parse_ipv6 (const uint8_t * packet, l3l4_quin_t * quin)
+uint8_t ps_parse_ipv6 (const uint8_t * packet, l3l4_quin_t * quin)
 {
 	const ipv6_header_t * ip;
 	ip = (ipv6_header_t*)(packet + ETHERNET_OFFSET);
-
+	uint8_t quin_present = 0;
 	char addr[46];
 
 	printf("       From: %s\n", inet_ntop(AF_INET6, &(ip->ip_src), addr, 46));
@@ -61,6 +62,7 @@ void ps_parse_ipv6 (const uint8_t * packet, l3l4_quin_t * quin)
 		case 0x06:
 			printf("   Protocol: TCP\n");
 			ps_parse_tcp (packet, IPV6_HEADER_SIZE, quin);							// If TCP, also parse it
+			quin_present = 1;
 			break;
 		case 0x11:
 			printf("   Protocol: UDP\n");
@@ -82,10 +84,8 @@ void ps_parse_ipv6 (const uint8_t * packet, l3l4_quin_t * quin)
 	memcpy(quin->dst_ip.un.v6.ip, ip->ip_dst.s6_addr, 16);
 	quin->proto = ip->next_header;
 	
-	return;
+	return quin_present;
 }
-
-
 
 
 

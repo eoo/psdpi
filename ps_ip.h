@@ -48,7 +48,7 @@ typedef struct tcp_header
         uint16_t urg_ptr;                	/* urgent pointer */
 } tcp_header_t;
 
-extern void ps_parse_ipv4 (const uint8_t * packet,  l3l4_quin_t * quin);
-extern void ps_parse_ipv6 (const uint8_t * packet,  l3l4_quin_t * quin);
+extern uint8_t ps_parse_ipv4 (const uint8_t * packet,  l3l4_quin_t * quin);
+extern uint8_t ps_parse_ipv6 (const uint8_t * packet,  l3l4_quin_t * quin);
 
 #endif
