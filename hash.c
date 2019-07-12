@@ -36,14 +36,14 @@ void ht_init(ht_table_t *ht) {
 void ht_print(ht_table_t *ht) {
 
     int i;
+    printf("Total Entries in Hash Table : %d\n", ht->entries); 
     for(i = 0; i < HASH_TABLE_SIZE; i++)
     {   
-        ht_bucket_t * bucket = &ht->bucket[i];
-        int entries = bucket->entries;
-        if(entries != 0)
+        ht_bucket_t * bucket = &(ht->bucket[i]);
+        
+        if(bucket->entries != 0)
         {   
             ht_entry_t * entry = &bucket->entry;
-            int j;
 
             printf("Src Port : %d\t", entry->value.src_port);
             printf("Dst Port : %d\t", entry->value.dst_port);
@@ -116,10 +116,10 @@ ht_ret_t ht_add(ht_table_t *ht, l3l4_quin_t *quin, uint16_t packet_len) {
             entry = entry->next;
 
         entry->next = temp;
+        
+        bucket->entries++;
+        ht->entries++;
     }
-
-    bucket->entries++;
-    ht->entries++;
 
     ht_ret_t ht_ret = ht_ret_ok;
     return ht_ret;
