@@ -1,7 +1,11 @@
-#include <pcap.h> 
+#include <pcap.h>
+#include <zmq.h>
+#include <pthread.h>
+#include <unistd.h>
 #include <string.h> 
 #include <stdlib.h> 
 #include <signal.h>
+#include <assert.h>
 #include "crc.h"
 #include "ps_eth.h"
 #include "ps_ip.h"
@@ -16,27 +20,6 @@ pcap_t *descr = NULL;
 ht_table_t ht;
 
 static eth_stats_t eth_stats;
-
-//decl fun for Ctrl+C
-void INThandler(int);
-
-// Ctrl+C defination
-void  INThandler(int sig) {
-    int8_t c;
-
-    signal(sig, SIG_IGN);
-    printf("Exit?");
-    c = getchar();
-    if (c == 'y' || c == 'Y'){
-        pcap_breakloop(descr);
-        pcap_close(descr);
-        ps_eth_stats_print(&eth_stats);
-        ht_print(&ht);
-        exit(0);
-    }
-    else
-        signal(SIGINT, INThandler);
-}
 
 /* processPacket(): Callback function called by pcap_loop() everytime a packet */
 /* arrives to the network card. This function prints the captured raw data in  */
@@ -82,9 +65,6 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
     if(quin_present)
         ht_add(&ht, &quin, pkthdr->len);
 
-
-
-
     /* save the packet on the dump file */
     pcap_dump(dumpfile, pkthdr, packet);
 
@@ -93,12 +73,43 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
     return;
 } 
 
-/* main(): Main function. Opens network interface and calls pcap_loop() */
-int main(int argc, char *argv[]) { 
+
+void * zmqserver(void * arg)
+{   
+    void *context = zmq_ctx_new ();
+    void *responder = zmq_socket (context, ZMQ_REP);
+    int rc = zmq_bind (responder, "tcp://*:5555");
+    assert (rc == 0);
+
+    while (1) {
+        char buffer [10];
+        zmq_recv (responder, buffer, 10, 0);
+        printf ("Received message from client to: %s\n", buffer);
+        sleep(1);
+        zmq_send (responder, "OK", 10, 0);
+
+        if(strcmp(buffer, "close") == 0)
+        {   
+            printf("Closing app...\n");
+            pcap_breakloop(descr);
+            pcap_close(descr);
+            ps_eth_stats_print(&eth_stats);
+            ht_print(&ht);
+        }
+    }
     
-    int i=0, count=0; 
-    signal(SIGINT, INThandler);
- 
+    return (int *)0;
+}
+
+
+int main(int argc, char *argv[]) {
+
+    pthread_t zmq_thread;
+    pthread_create(&zmq_thread, NULL, zmqserver, NULL);
+    
+
+
+
     char errbuf[PCAP_ERRBUF_SIZE], *device=NULL; 
     memset(errbuf,0,PCAP_ERRBUF_SIZE); 
 
