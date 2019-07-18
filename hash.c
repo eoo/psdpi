@@ -19,7 +19,6 @@ static void ht_bucket_init(ht_bucket_t *bucket) {
     bucket->filled = 0;
     bucket->collisions = 0;
     ht_entry_init(&bucket->entry);
-    bucket->next = (ht_entry_t *)0; 
 }
 
 void ht_init(ht_table_t *ht) {
@@ -45,8 +44,8 @@ void ht_print(ht_table_t *ht) {
         {   
             ht_entry_t * entry = &bucket->entry;
 
-            printf("Src Port : %d\t", entry->value.src_port);
-            printf("Dst Port : %d\t", entry->value.dst_port);
+            printf("Src Port : %d\t", ntohs(entry->value.src_port));
+            printf("Dst Port : %d\t", ntohs(entry->value.dst_port));
             printf("Packets : ");
             printf("%" PRIu64 "\n", entry->stats.packets);
         }
@@ -94,6 +93,8 @@ ht_ret_t ht_add(ht_table_t *ht, l3l4_quin_t *quin, uint16_t packet_len) {
 
         entry->stats.packets++;
         entry->stats.bytes += packet_len;
+
+        printf("Updating prevous entry with hash key %" PRIu32 "\n",key);
     } 
     
 
@@ -119,7 +120,14 @@ ht_ret_t ht_add(ht_table_t *ht, l3l4_quin_t *quin, uint16_t packet_len) {
         
         bucket->entries++;
         ht->entries++;
+        printf("Creating new entry with hash key %" PRIu32 "\n",key);
     }
+    else
+    {
+        printf("All buckets filled at index %" PRIu16 "\n", index);
+    }
+
+
 
     ht_ret_t ht_ret = ht_ret_ok;
     return ht_ret;
@@ -145,5 +153,6 @@ uint32_t compute_hash(l3l4_quin_t *quin)
     uint8_t temp3 = quin->proto;
     result += crc32buf((char *)&temp3, 1);
 
+    printf("Comuted Hash: %" PRIu32 "\n",result);
     return result;
 }

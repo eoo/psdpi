@@ -28,7 +28,7 @@ typedef struct ht_bucket {
     uint8_t    filled;   // set to 1 if this entry is filled
     uint64_t collisions; // number of collisions for this bucket
     ht_entry_t entry;    // first entry in bucket
-    ht_entry_t *next;    // pointer to next bucket
+
 } ht_bucket_t;
 
 typedef enum ht_ret {

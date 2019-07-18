@@ -31,20 +31,18 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
     eth_type_t eth;
     char * protocol;
 
-    l3l4_quin_t quin;
-    l3l4_quin_init(&quin);
-
-    
     printf("Packet Count: %d\n", ++(packet_counter));
-    bytes_counter += pkthdr->len;
-    printf("Received Packet Size: %d\n", pkthdr->len); 
-    printf("Cumulative: Packets %d: Bytes %d\n", packet_counter, bytes_counter);
+    //bytes_counter += pkthdr->len;
+    //printf("Received Packet Size: %d\n", pkthdr->len); 
+    //printf("Cumulative: Packets %d: Bytes %d\n", packet_counter, bytes_counter);
     
-    printf("Payload:\n"); 
+    //printf("Payload:\n"); 
 
     eth = ps_parse_eth(&eth_stats, packet);
     printf("ETH TYPE = 0x%04x \n", ntohs(eth));
     
+    l3l4_quin_t quin;
+    l3l4_quin_init(&quin);
     uint8_t quin_present;
 
     switch (ntohs(eth)) {
@@ -107,8 +105,6 @@ int main(int argc, char *argv[]) {
     pthread_t zmq_thread;
     pthread_create(&zmq_thread, NULL, zmqserver, NULL);
     
-
-
 
     char errbuf[PCAP_ERRBUF_SIZE], *device=NULL; 
     memset(errbuf,0,PCAP_ERRBUF_SIZE); 
