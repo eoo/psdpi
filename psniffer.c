@@ -78,8 +78,9 @@ void * zmqserver(void * arg)
     void *responder = zmq_socket (context, ZMQ_REP);
     int rc = zmq_bind (responder, "tcp://*:5555");
     assert (rc == 0);
+    int stop = 1;
 
-    while (1) {
+    while (stop) {
         char buffer [10];
         zmq_recv (responder, buffer, 10, 0);
         printf ("Received message from client to: %s\n", buffer);
@@ -88,14 +89,18 @@ void * zmqserver(void * arg)
 
         if(strcmp(buffer, "close") == 0)
         {   
-            printf("Closing app...\n");
+            printf("Closing zmqserver thread...\n");
             pcap_breakloop(descr);
-            pcap_close(descr);
+//            pcap_close(descr);
             ps_eth_stats_print(&eth_stats);
             ht_print(&ht);
         }
+        stop = 0;
     }
-    
+
+    zmq_close (responder);
+    zmq_ctx_destroy (context); 
+   
     return (int *)0;
 }
 
@@ -104,6 +109,7 @@ int main(int argc, char *argv[]) {
 
     pthread_t zmq_thread;
     pthread_create(&zmq_thread, NULL, zmqserver, NULL);
+    void *pthread_ret;
     
 
     char errbuf[PCAP_ERRBUF_SIZE], *device=NULL; 
@@ -136,5 +142,12 @@ int main(int argc, char *argv[]) {
        fprintf(stderr, "ERROR: %s\n", pcap_geterr(descr) );
        exit(1);
     }
+    pcap_close(descr);
+
+    if (pthread_join(zmq_thread, &pthread_ret) != 0) {
+        perror("pthread_join() error");
+        exit(3);
+    }
+    printf("zmqserver thread exited with '%s'\n", pthread_ret);
     return 0; 
 } 
