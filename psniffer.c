@@ -94,8 +94,9 @@ void * zmqserver(void * arg)
 //            pcap_close(descr);
             ps_eth_stats_print(&eth_stats);
             ht_print(&ht);
+            stop = 0;
         }
-        stop = 0;
+        
     }
 
     zmq_close (responder);
