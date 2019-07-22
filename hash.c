@@ -100,26 +100,41 @@ ht_ret_t ht_add(ht_table_t *ht, l3l4_quin_t *quin, uint16_t packet_len) {
 
     else if(!bucket->filled)
     {   
-        //create new entry
-        ht_entry_t * temp;
-        temp = (ht_entry_t *)malloc(sizeof(ht_entry_t));
-        temp->key = key;
-        l3l4_quin_init(&temp->value);
         
-        temp->stats.packets = 1;
-        temp->stats.bytes = packet_len;
-        temp->next = 0;  //NULL pointer
+        if(bucket->entries == 0)    //update first Entry
+        {
+            ht_entry_t * entry = &(bucket->entry);
+            entry->key = key;
+            entry->stats.packets = 1;
+            entry->stats.bytes = packet_len;
+            entry->next = 0; //NULL POINTER
+            entry->value = *quin;
+        }
 
-        //add entry to the end of list
-        ht_entry_t * entry = &(bucket->entry);
-        int i;
-        for(i = 1; i < bucket->entries; i++)
-            entry = entry->next;
+        else                        //create new entry and add to end of list
+        {
+            //create new entry
+            ht_entry_t * temp;
+            temp = (ht_entry_t *)malloc(sizeof(ht_entry_t));
+            temp->key = key;
+            l3l4_quin_init(&temp->value);
+            temp->value = *quin;   
+            temp->stats.packets = 1;
+            temp->stats.bytes = packet_len;
+            temp->next = 0;  //NULL pointer
+            
+            //add entry to the end of list
+            ht_entry_t * entry = &(bucket->entry);
+            int i;
+            for(i = 1; i < bucket->entries; i++)
+                entry = entry->next;
 
-        entry->next = temp;
-        
-        bucket->entries++;
+            entry->next = temp;
+        }
+
         ht->entries++;
+        bucket->entries++;
+        if(bucket->entries == 10) bucket->filled = 1;
         printf("Creating new entry with hash key %" PRIu32 "\n",key);
     }
     else

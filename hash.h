@@ -25,7 +25,7 @@ typedef struct ht_entry {
 
 typedef struct ht_bucket {
     uint16_t   entries;  // number of entries in bucket
-    uint8_t    filled;   // set to 1 if this entry is filled
+    uint8_t    filled;   // set to 1 if the bucket is full
     uint64_t collisions; // number of collisions for this bucket
     ht_entry_t entry;    // first entry in bucket
 

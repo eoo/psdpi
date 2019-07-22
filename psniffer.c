@@ -43,7 +43,7 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
     
     l3l4_quin_t quin;
     l3l4_quin_init(&quin);
-    uint8_t quin_present;
+    uint8_t quin_present = 0;
 
     switch (ntohs(eth)) {
         case PS_ETH_TYPE_IPV4:
