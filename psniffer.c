@@ -96,7 +96,19 @@ void * zmqserver(void * arg)
             ht_print(&ht);
             stop = 0;
         }
-        
+
+        if(strcmp(buffer, "clear") == 0)
+        {
+            printf("Clearing Hash Table...\n");
+            ht_clear(&ht);
+        }
+
+        if(strcmp(buffer, "print") == 0)
+        {
+            printf("Clearing Hash Table...\n");
+            ht_print(&ht);
+        }
+
     }
 
     zmq_close (responder);

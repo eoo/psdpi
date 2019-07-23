@@ -25,6 +25,8 @@ client:
 ```
 $ ./client <command>
 ```
-Currently only one command is supported:
+Supported commands for client program:
 
 - *close* : closes the program and displays stats
+- *print* : print stats
+- *clear* : free all memory and clear hash table

@@ -45,8 +45,7 @@ typedef struct ht_table {
 extern void ht_init(ht_table_t *ht);
 extern void ht_print(ht_table_t *ht);
 extern ht_ret_t ht_add(ht_table_t *ht, l3l4_quin_t *quin, uint16_t packet_len);
-
-extern uint32_t compute_hash(l3l4_quin_t *quin);
+extern void ht_clear(ht_table_t * ht);
 
 
 #endif

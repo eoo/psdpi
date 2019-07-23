@@ -5,7 +5,9 @@
 #include "hash.h"
 #include "ps_stats.h"
 
-
+static void clear_bucket(ht_bucket_t * bucket);
+static uint32_t compute_hash(l3l4_quin_t *quin);
+static uint8_t already_present(ht_table_t * ht, ht_key_t key);
 
 static void ht_entry_init(ht_entry_t * entry) {
     entry->key = 0;
@@ -52,7 +54,7 @@ void ht_print(ht_table_t *ht) {
     }
 }
 
-uint8_t already_present(ht_table_t * ht, ht_key_t key)    //returns 0 if not present, and the index in linked list if present
+static uint8_t already_present(ht_table_t * ht, ht_key_t key)    //returns 0 if not present, and the index in linked list if present
 {
     uint16_t index = key % HASH_TABLE_SIZE;
     ht_bucket_t * bucket = &ht->bucket[index];
@@ -149,7 +151,7 @@ ht_ret_t ht_add(ht_table_t *ht, l3l4_quin_t *quin, uint16_t packet_len) {
 }
 
 
-uint32_t compute_hash(l3l4_quin_t *quin)
+static uint32_t compute_hash(l3l4_quin_t *quin)
 {   
     uint32_t result;
 
@@ -170,4 +172,33 @@ uint32_t compute_hash(l3l4_quin_t *quin)
 
     printf("Comuted Hash: %" PRIu32 "\n",result);
     return result;
+}
+
+
+void ht_clear(ht_table_t * ht)
+{   int i;
+    for(i = 0; i < HASH_TABLE_SIZE; i++)
+    {
+        clear_bucket(&ht->bucket[i]);
+    }
+
+    ht_init(ht);
+}
+
+static void clear_bucket(ht_bucket_t * bucket)
+{   
+    int entries,i;
+    ht_entry_t * entry = &bucket->entry;
+    entry = entry->next;
+    ht_entry_t * temp = entry;
+
+        //free all the memory
+        while( entry != NULL )
+        {   
+            temp = entry->next;
+            free(entry);
+            entry = temp;
+        }
+
+    return;
 }
