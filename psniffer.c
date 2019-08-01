@@ -6,6 +6,7 @@
 #include <stdlib.h> 
 #include <signal.h>
 #include <assert.h>
+#include <libconfig.h>
 #include "crc.h"
 #include "ps_eth.h"
 #include "ps_ip.h"
@@ -74,9 +75,15 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
 
 void * zmqserver(void * arg)
 {   
+
+    char * zmq_port = (char * )arg;
+    char endpoint[20] = "tcp://*:";
+    strcat(endpoint, zmq_port);
+
+
     void *context = zmq_ctx_new ();
     void *responder = zmq_socket (context, ZMQ_REP);
-    int rc = zmq_bind (responder, "tcp://*:5555");
+    int rc = zmq_bind (responder, endpoint);
     assert (rc == 0);
     int stop = 1;
 
@@ -91,7 +98,6 @@ void * zmqserver(void * arg)
         {   
             printf("Closing zmqserver thread...\n");
             pcap_breakloop(descr);
-//            pcap_close(descr);
             ps_eth_stats_print(&eth_stats);
             ht_print(&ht);
             stop = 0;
@@ -119,11 +125,33 @@ void * zmqserver(void * arg)
 
 
 int main(int argc, char *argv[]) {
-
-    pthread_t zmq_thread;
-    pthread_create(&zmq_thread, NULL, zmqserver, NULL);
-    void *pthread_ret;
     
+    //READING CONFIGURATION
+
+    config_t cfg;
+    config_init(&cfg);
+
+    if(! config_read_file(&cfg, "app.cfg"))
+    {
+        fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg),
+        config_error_line(&cfg), config_error_text(&cfg));
+        config_destroy(&cfg);
+        return(EXIT_FAILURE);
+    }
+
+    const char * zmq_port;
+    if(config_lookup_string(&cfg, "zmq_port", &zmq_port))
+        printf("Setting ZMQ Port as : %s\n\n", zmq_port);
+    else{
+        fprintf(stderr, "No 'zmqport' setting in configuration file. Using default port 5555\n");
+        zmq_port = "5555";
+    }
+
+    //ZMQ THREAD
+    pthread_t zmq_thread;
+    void *pthread_ret;
+    pthread_create(&zmq_thread, NULL, zmqserver, (void *)zmq_port);
+
 
     char errbuf[PCAP_ERRBUF_SIZE], *device=NULL; 
     memset(errbuf,0,PCAP_ERRBUF_SIZE); 

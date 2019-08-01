@@ -1,6 +1,7 @@
 #ifndef HASH_H
 #define HASH_H
 #include <stdint.h>
+#include <libconfig.h>
 #include "l3l4.h"
 #include "ps_stats.h"
 
