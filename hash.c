@@ -7,7 +7,7 @@
 
 static void clear_bucket(ht_bucket_t * bucket);
 static uint32_t compute_hash(l3l4_quin_t *quin);
-static uint8_t already_present(ht_table_t * ht, ht_key_t key);
+static uint8_t already_present(ht_table_t * ht, ht_key_t key, l3l4_quin_t * quin);
 
 static void ht_entry_init(ht_entry_t * entry) {
     entry->key = 0;
@@ -54,7 +54,7 @@ void ht_print(ht_table_t *ht) {
     }
 }
 
-static uint8_t already_present(ht_table_t * ht, ht_key_t key)    //returns 0 if not present, and the index in linked list if present
+static uint8_t already_present(ht_table_t * ht, ht_key_t key, l3l4_quin_t * quin)    //returns 0 if not present, and the index in linked list if present
 {
     uint16_t index = key % HASH_TABLE_SIZE;
     ht_bucket_t * bucket = &ht->bucket[index];
@@ -64,7 +64,8 @@ static uint8_t already_present(ht_table_t * ht, ht_key_t key)    //returns 0 if 
     if(bucket->entries == 0 )       return present;
 
     //check first entry
-    if(bucket->entry.key == key)    present = 1;
+    //if(bucket->entry.key == key)    present = 1;
+    if(!l3l4_quin_compare(quin, &(bucket->entry.value))) present = 1;
 
     //check rest of entries
     ht_entry_t * entry = &bucket->entry;
@@ -72,7 +73,9 @@ static uint8_t already_present(ht_table_t * ht, ht_key_t key)    //returns 0 if 
     for(i = 1; i < bucket->entries; i++)
     {   
         entry =  entry->next;
-        if(entry->key == key)       present = i+1;
+        //if(entry->key == key)       present = i+1;
+        if(!l3l4_quin_compare(quin, &(entry->value)))       present = i+1;
+
     }
 
     return present;
@@ -84,7 +87,7 @@ ht_ret_t ht_add(ht_table_t *ht, l3l4_quin_t *quin, uint16_t packet_len) {
     uint16_t index = key % HASH_TABLE_SIZE;
     ht_bucket_t * bucket = &ht->bucket[index];
 
-    uint8_t present = already_present(ht, key); // if key not present returns 0, else returns its index in the linked list
+    uint8_t present = already_present(ht, key, quin); // if key not present returns 0, else returns its index in the linked list
 
     if(present)
     {   
@@ -96,7 +99,7 @@ ht_ret_t ht_add(ht_table_t *ht, l3l4_quin_t *quin, uint16_t packet_len) {
         entry->stats.packets++;
         entry->stats.bytes += packet_len;
 
-        printf("Updating prevous entry with hash key %" PRIu32 "\n",key);
+        printf("Updating previous entry with hash key %" PRIu32 "\n",key);
     } 
     
 
