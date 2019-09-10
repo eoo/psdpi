@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <libconfig.h>
 
+//typedef enum action {close = 1, print = 2, clear = 3} action_t;
+
 int main (int argc, char *argv[])
 {      
     //READING CONFIGURATION

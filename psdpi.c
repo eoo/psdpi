@@ -2,8 +2,8 @@
 #include <zmq.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <string.h> 
-#include <stdlib.h> 
+#include <string.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <assert.h>
 #include <libconfig.h>
@@ -11,21 +11,21 @@
 #include "ps_eth.h"
 #include "ps_ip.h"
 #include "hash.h"
+#include "tpool.h"
 
-#define MAXBYTES2CAPTURE 2048 
+void wrapper(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_char * packet);
+
+#define MAXBYTES2CAPTURE 2048
 
 pcap_dumper_t *pdumper;
 pcap_t *descr = NULL;
-
-//hash table declaration. Init in main()
 ht_table_t ht;
+tpool_t thread_pool;
+pthread_mutex_t ht_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static eth_stats_t eth_stats;
 
-/* processPacket(): Callback function called by pcap_loop() everytime a packet */
-/* arrives to the network card. This function prints the captured raw data in  */
-/* hexadecimal.                                                             */
-void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_char * packet){ 
+void processPacket(packet_data_t * arg){ 
     int i=0;
     static packet_counter = 0; 
     static bytes_counter = 0;
@@ -33,13 +33,7 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
     char * protocol;
 
     printf("Packet Count: %d\n", ++(packet_counter));
-    //bytes_counter += pkthdr->len;
-    //printf("Received Packet Size: %d\n", pkthdr->len); 
-    //printf("Cumulative: Packets %d: Bytes %d\n", packet_counter, bytes_counter);
-    
-    //printf("Payload:\n"); 
-
-    eth = ps_parse_eth(&eth_stats, packet);
+    eth = ps_parse_eth(&eth_stats, arg->packet);
     printf("ETH TYPE = 0x%04x \n", ntohs(eth));
     
     l3l4_quin_t quin;
@@ -48,27 +42,26 @@ void processPacket(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_c
 
     switch (ntohs(eth)) {
         case PS_ETH_TYPE_IPV4:
-            quin_present = ps_parse_ipv4(packet, &quin);
+            quin_present = ps_parse_ipv4(arg->packet, &quin);
             break;
 
         case PS_ETH_TYPE_IPV6:
-            quin_present = ps_parse_ipv6(packet, &quin);
+            quin_present = ps_parse_ipv6(arg->packet, &quin);
             break;
 
         default:
             break;
     }
 
-    //----------------------------------hashing stuff --------------------------------------------------------
-
+    //Add to hash table if valid packet
     if(quin_present)
-        ht_add(&ht, &quin, pkthdr->len);
+        pthread_mutex_lock(&ht_mutex);
+        ht_add(&ht, &quin, arg->pkthdr->len);
+        pthread_mutex_unlock(&ht_mutex);
 
     /* save the packet on the dump file */
-    pcap_dump(dumpfile, pkthdr, packet);
-
-    printf("================================== \n");
-
+    pcap_dump(arg->dumpfile, arg->pkthdr, arg->packet);
+    printf(" ================================== \n");
     return;
 } 
 
@@ -111,7 +104,7 @@ void * zmqserver(void * arg)
 
         if(strcmp(buffer, "print") == 0)
         {
-            printf("Clearing Hash Table...\n");
+            printf("Printing Hash Table...\n");
             ht_print(&ht);
         }
 
@@ -125,9 +118,11 @@ void * zmqserver(void * arg)
 
 
 int main(int argc, char *argv[]) {
-    
-    //READING CONFIGURATION
 
+    //Initialising Thread pool
+    tpool_init(&thread_pool, 10, 2048, 0);
+    
+    //Reading configuration
     config_t cfg;
     config_init(&cfg);
 
@@ -159,10 +154,10 @@ int main(int argc, char *argv[]) {
     ps_eth_stats_init(&eth_stats);
     ht_init(&ht);
 
-    if( argc > 1){  /* If user supplied interface name, use it. */
+    if( argc > 1){                      /* If user supplied interface name, use it. */
         device = argv[1];
     }
-    else {  /* Get the name of the first device suitable for capture */ 
+    else {                              /* Get the name of the first device suitable for capture */ 
         if ( (device = pcap_lookupdev(errbuf)) == NULL){
             fprintf(stderr, "ERROR: %s\n", errbuf);
             exit(1);
@@ -179,7 +174,7 @@ int main(int argc, char *argv[]) {
     pdumper = pcap_dump_open(descr, "test.pcap");//save to file
 
     /* Loop forever & call processPacket() for every received packet*/ 
-    if ( pcap_loop(descr, 0, processPacket, (unsigned char *)pdumper) == -1){
+    if ( pcap_loop(descr, 0, wrapper, (unsigned char *)pdumper) == -1){
        fprintf(stderr, "ERROR: %s\n", pcap_geterr(descr) );
        exit(1);
     }
@@ -192,3 +187,14 @@ int main(int argc, char *argv[]) {
     printf("zmqserver thread exited with '%s'\n", pthread_ret);
     return 0; 
 } 
+
+
+void wrapper(u_char *dumpfile, const struct pcap_pkthdr* pkthdr, const u_char * packet) {
+    packet_data_t * arg = malloc(sizeof(packet_data_t));
+    arg->dumpfile = dumpfile;
+    arg->pkthdr = pkthdr;
+    arg->packet = packet;
+
+    tpool_add_work(thread_pool, processPacket, arg);
+
+}
